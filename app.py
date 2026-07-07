@@ -1,78 +1,49 @@
-{
-  "nbformat": 4,
-  "nbformat_minor": 0,
-  "metadata": {
-    "colab": {
-      "provenance": [],
-      "authorship_tag": "ABX9TyNm4tHbcegOaqzdaxL+M0Fi",
-      "include_colab_link": true
-    },
-    "kernelspec": {
-      "name": "python3",
-      "display_name": "Python 3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {
-        "id": "view-in-github",
-        "colab_type": "text"
-      },
-      "source": [
-        "<a href=\"https://colab.research.google.com/github/pratishtharaj07/male-female/blob/main/app_py.ipynb\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {
-        "id": "lHk3sca4aHJP"
-      },
-      "outputs": [],
-      "source": [
-        "import streamlit as st\n",
-        "import cv2\n",
-        "import joblib\n",
-        "import numpy as np\n",
-        "from PIL import Image\n",
-        "\n",
-        "IMG_SIZE = 64\n",
-        "\n",
-        "# Load trained model\n",
-        "model = joblib.load(\"FEMALE_MALE_model.pkl\")\n",
-        "\n",
-        "st.title(\"Male vs Female Image Classification\")\n",
-        "\n",
-        "uploaded_file = st.file_uploader(\n",
-        "    \"Upload an Image\",\n",
-        "    type=[\"jpg\", \"jpeg\", \"png\"]\n",
-        ")\n",
-        "\n",
-        "if uploaded_file is not None:\n",
-        "    image = Image.open(uploaded_file)\n",
-        "\n",
-        "    st.image(image, caption=\"Uploaded Image\", use_container_width=True)\n",
-        "\n",
-        "    img = np.array(image)\n",
-        "\n",
-        "    # Convert RGB to BGR\n",
-        "    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)\n",
-        "\n",
-        "    img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))\n",
-        "\n",
-        "    img = img.flatten().reshape(1, -1)\n",
-        "\n",
-        "    prediction = model.predict(img)\n",
-        "\n",
-        "    if prediction[0] == 0:\n",
-        "        st.success(\"Prediction: FEMALE\")\n",
-        "    else:\n",
-        "        st.success(\"Prediction: MALE\")"
-      ]
-    }
-  ]
-}
+import streamlit as st
+import cv2
+import numpy as np
+import joblib
+
+# Load trained model
+model = joblib.load("FEMALE_MALE_model.pkl")
+
+IMG_SIZE = 64
+classes = ["FEMALE", "MALE"]
+
+st.set_page_config(page_title="Gender Prediction", page_icon="👤")
+
+st.title("👤 Gender Prediction using Machine Learning")
+st.write("Upload an image to predict whether it is **FEMALE** or **MALE**.")
+
+uploaded_file = st.file_uploader(
+    "Choose an image...",
+    type=["jpg", "jpeg", "png"]
+)
+
+if uploaded_file is not None:
+
+    # Display uploaded image
+    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+
+    # Convert uploaded file to OpenCV image
+    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+
+    if img is None:
+        st.error("Invalid image.")
+    else:
+        # Preprocess image
+        img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
+        img = img.flatten()
+        img = img.reshape(1, -1)
+
+        # Predict
+        prediction = model.predict(img)[0]
+        result = classes[prediction]
+
+        # Confidence
+        if hasattr(model, "predict_proba"):
+            confidence = np.max(model.predict_proba(img)) * 100
+            st.success(f"Prediction: **{result}**")
+            st.info(f"Confidence: **{confidence:.2f}%**")
+        else:
+            st.success(f"Prediction: **{result}**")
